@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مولد حرفه‌ای کتاب ای‌پاب فارسی</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Load a high-quality Persian font (Vazirmatn) for the UI for a clean look -->
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        // Use Vazirmatn for the UI, or Inter as a fallback for Latin text
+                        sans: ['Vazirmatn', 'Inter', 'sans-serif'], 
+                    },
+                    colors: {
+                        // Professional Blue/Indigo Palette
+                        'primary': {
+                            DEFAULT: '#3b82f6', // Blue-500
+                            dark: '#1d4ed8',   // Blue-700
+                            light: '#93c5fd',  // Blue-300
+                            accent: '#4f46e5', // Indigo-600
+                        },
+                        'background': '#f8fafc', // Slate-50 for a clean backdrop
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles for RTL and subtle effects -->
+    <style>
+        body {
+            font-family: 'Vazirmatn', 'Inter', sans-serif;
+            direction: rtl; /* Ensure global RTL */
+        }
+        /* Custom scrollbar for text area */
+        #book-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        #book-content::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; /* Slate-300 */
+            border-radius: 4px;
+        }
+        /* Custom styling for file input appearance */
+        #cover-image-input::file-selector-button {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+    </style>
+    
+    <!-- Load JSZip for creating the EPUB (ZIP archive) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body class="bg-background min-h-screen p-4 sm:p-12 font-sans">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-10 p-8 bg-white/70 backdrop-blur-md rounded-2xl border-b-4 border-primary-dark shadow-xl shadow-blue-100/50">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-2 leading-tight">
+                مولد کتاب <span class="text-primary-accent">EPUB</span> (حرفه‌ای)
+            </h1>
+            <p class="text-lg text-gray-600 mt-3 max-w-2xl mx-auto">
+                محتوای Markdown خود را به یک کتاب الکترونیک استاندارد، کاملاً راست‌چین و عاری از فاصله‌های خطی ناخواسته تبدیل کنید.
+            </p>
+        </header>
+
+        <div class="bg-white p-6 sm:p-10 rounded-3xl shadow-2xl shadow-blue-200/50 border border-gray-100 transition duration-500 hover:shadow-blue-300/50">
+            
+            <!-- Input Fields - Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div>
+                    <label for="book-title" class="block text-sm font-bold text-gray-700 mb-2">
+                        📘 عنوان کتاب
+                    </label>
+                    <input type="text" id="book-title" value="" dir="rtl"
+                           class="w-full p-4 border border-gray-200 bg-gray-50 rounded-2xl focus:ring-4 focus:ring-primary-light/50 focus:border-primary-dark transition duration-300 shadow-md text-right placeholder-gray-400 text-lg"
+                           placeholder="نام کتاب شما">
+                </div>
+                <div>
+                    <label for="book-author" class="block text-sm font-bold text-gray-700 mb-2">
+                        👤 نام نویسنده
+                    </label>
+                    <input type="text" id="book-author" value="امیر فصیح" dir="rtl"
+                           class="w-full p-4 border border-gray-200 bg-gray-50 rounded-2xl focus:ring-4 focus:ring-primary-light/50 focus:border-primary-dark transition duration-300 shadow-md text-right placeholder-gray-400 text-lg"
+                           placeholder="نام کامل نویسنده">
+                </div>
+            </div>
+
+            <!-- Cover Field (Enhanced UI) -->
+            <div class="mb-10 p-6 border border-primary-light/50 rounded-3xl bg-blue-50/70 shadow-inner shadow-blue-100/50">
+                <label for="cover-image-input" class="block text-base font-bold text-primary-dark mb-4">
+                    🖼️ تصویر جلد کتاب (اختیاری - JPG/PNG)
+                </label>
+                <input type="file" id="cover-image-input" accept="image/jpeg, image/png"
+                        class="w-full text-sm text-gray-600 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-primary/20 file:text-primary-dark hover:file:bg-primary/30 cursor-pointer shadow-md transition duration-300">
+                
+                <div id="cover-preview-container" class="mt-8 hidden">
+                    <p class="text-sm font-bold text-gray-700 mb-4">پیش‌نمایش جلد آپلود شده:</p>
+                    <img id="cover-preview" class="w-full h-80 sm:w-72 sm:h-96 border-4 border-white ring-4 ring-primary-light/50 rounded-2xl object-contain shadow-2xl shadow-blue-300/50 mx-auto" alt="Cover Preview" />
+                </div>
+                
+                <p id="default-cover-hint" class="mt-4 text-xs text-gray-500">اگر تصویری آپلود نکنید، یک جلد ساده و مدرن با متن تولید خواهد شد.</p>
+            </div>
+
+            <!-- Content Editor -->
+            <div class="mb-10">
+                <label for="book-content" class="block text-sm font-bold text-gray-700 mb-2">
+                    📝 محتوای کتاب (Markdown)
+                </label>
+                <div class="text-sm text-gray-500 mb-4 bg-gray-100 p-3 rounded-xl border border-gray-200">
+                    <span class="font-bold text-primary-accent">راهنما:</span> هر <kbd class="px-1.5 py-0.5 bg-gray-300 rounded text-gray-800 font-mono text-xs"># عنوان</kbd> (سطح یک) **یک فصل جدید** با همان نام در ای‌پاب ایجاد می‌کند. <kbd class="px-1.5 py-0.5 bg-gray-300 rounded text-gray-800 font-mono text-xs">## زیرعنوان</kbd> و <kbd class="px-1.5 py-0.5 bg-gray-300 rounded text-gray-800 font-mono text-xs">### زیر زیرعنوان</kbd> در فهرست مطالب نمایش داده می‌شوند.
+                </div>
+                <textarea id="book-content" rows="18" dir="rtl"
+                              class="w-full p-6 border border-gray-300 bg-white rounded-2xl focus:ring-4 focus:ring-primary-light/50 focus:border-primary-dark transition duration-300 shadow-xl shadow-gray-200/50 resize-y text-right text-base leading-relaxed"
+                              placeholder="محتوای Markdown خود را اینجا وارد کنید...">
+این یک مقدمه کوتاه است که باید به فصل بعدی الحاق شود.
+## مقدمه کتاب: ریشه‌های هوش مصنوعی
+
+هوش مصنوعی (AI) دیگر یک مفهوم علمی تخیلی نیست، بلکه نیروی محرکه انقلاب صنعتی چهارم است. ریشه‌های این فناوری به دهه‌های پیش و تلاش دانشمندانی چون آلن تورینگ باز می‌گردد، زمانی که تنها یک ایده انتزاعی بود.
+
+# فصل اول: پیشرفت‌های اخیر
+*پیشرفت‌های اخیر، به ویژه در یادگیری عمیق، امکانات جدیدی را فراهم کرده است.*
+
+## اهمیت تست تورینگ
+تست تورینگ، معیاری است برای ارزیابی توانایی ماشین در نمایش رفتار هوشمند.
+
+### اولین تلاش‌ها
+اولین برنامه‌های کامپیوتری که سعی در فریب انسان داشتند.
+
+# فصل دوم: چالش‌های اخلاقی
+
+با وجود پیشرفت‌های خیره‌کننده، هوش مصنوعی چالش‌های اخلاقی بزرگی را به همراه دارد. از سوگیری‌های الگوریتمی تا جایگزینی شغل‌ها، نیاز به چارچوب‌های اخلاقی قوی بیش از هر زمان دیگری احساس می‌شود.
+
+## سوگیری الگوریتمی
+چگونه داده‌های آموزشی مغرضانه منجر به تصمیمات ناعادلانه می‌شوند.
+
+# نتیجه‌گیری: نگاه به آینده
+
+آینده هوش مصنوعی روشن است، اما به مسئولیت‌پذیری ما بستگی دارد. ما باید یاد بگیریم چگونه این ابزار قدرتمند را در جهت منافع بشر به کار گیریم.</textarea>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button id="generate-button" onclick="generateEpub()"
+                        class="px-12 py-4 w-full sm:w-2/3 mx-auto bg-gradient-to-r from-primary-dark to-primary-accent text-white font-extrabold rounded-2xl text-xl shadow-2xl shadow-blue-400/50 hover:shadow-blue-500/70 focus:outline-none focus:ring-4 focus:ring-primary-dark/50 transition duration-500 transform hover:scale-[1.02]">
+                    ⬇️ ساخت و دانلود فایل EPUB
+                </button>
+            </div>
+            
+            <!-- Status Message -->
+            <div id="status-message" class="mt-8 text-center text-sm font-medium transition duration-300 opacity-0"></div>
+        </div>
+        
+        <footer class="mt-16 text-center text-sm text-gray-500">
+            ساخته شده با <span class="text-primary-accent">❤️</span> برای ارائه بهترین تجربه خواندن فارسی در کتاب‌خوان‌ها.
+        </footer>
+    </div>
+
+    <script>
+        // Global utility to show status messages
+        const statusMessage = document.getElementById('status-message');
+        const generateButton = document.getElementById('generate-button');
+        
+        // --- PERSISTENCE UTILITIES ---
+        const ELEMENTS_TO_PERSIST = [
+            { id: 'book-title', key: 'epub_title' },
+            { id: 'book-author', key: 'epub_author' },
+            { id: 'book-content', key: 'epub_content' }
+        ];
+
+        function saveState() {
+            ELEMENTS_TO_PERSIST.forEach(item => {
+                const element = document.getElementById(item.id);
+                if (element) {
+                    localStorage.setItem(item.key, element.value);
+                }
+            });
+        }
+
+        function loadState() {
+            ELEMENTS_TO_PERSIST.forEach(item => {
+                const element = document.getElementById(item.id);
+                const savedValue = localStorage.getItem(item.key);
+                if (element && savedValue !== null) {
+                    // Special handling for content to avoid loading empty strings
+                    if (item.id === 'book-content' && savedValue.trim() !== '') {
+                        element.value = savedValue;
+                    } else if (item.id !== 'book-content') {
+                        element.value = savedValue;
+                    }
+                }
+            });
+            // Set default value of book-title to empty string
+            document.getElementById('book-title').value = localStorage.getItem('epub_title') || ''; 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState(); 
+            ELEMENTS_TO_PERSIST.forEach(item => {
+                const element = document.getElementById(item.id);
+                if (element) {
+                    element.addEventListener('input', saveState);
+                }
+            });
+        });
+        // --- END PERSISTENCE UTILITIES ---
+
+
+        function showStatus(message, isError = false) {
+            statusMessage.textContent = message;
+            // Enhanced visual feedback for status messages
+            statusMessage.className = `mt-8 text-center text-base font-medium transition duration-300 opacity-100 p-4 rounded-xl shadow-lg animate-pulse ${isError ? 'bg-red-100 text-red-800 border-2 border-red-500' : 'bg-green-100 text-green-800 border-2 border-green-500'} text-right`;
+            if (!isError) {
+                 setTimeout(() => {
+                    statusMessage.classList.remove('opacity-100');
+                    statusMessage.classList.add('opacity-0');
+                    statusMessage.classList.remove('animate-pulse');
+                }, 5000);
+            } else {
+                 statusMessage.classList.remove('animate-pulse');
+            }
+        }
+        
+        // Listener for Cover Image Preview
+        document.getElementById('cover-image-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const previewContainer = document.getElementById('cover-preview-container');
+            const previewImg = document.getElementById('cover-preview');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewContainer.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                previewContainer.classList.add('hidden');
+                previewImg.src = '';
+            }
+        });
+
+        // Inject unique IDs into H1, H2, H3 tags that lack them
+        function injectHeadingIds(html) {
+            let idCounter = 0;
+            // Regex to find any heading tag H1, H2, or H3
+            return html.replace(/<h([1-3])(.*?)>(.*?)<\/h\1>/g, (match, level, attrs, content) => {
+                // Check if the tag already has an ID attribute
+                if (attrs.includes('id=')) {
+                    return match; // Return as is if ID already exists
+                }
+                
+                // Generate a unique, semantic ID
+                const safeContent = content.substring(0, 30).trim().replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
+                const id = `h${level}_${safeContent}_${++idCounter}`;
+                
+                // Inject the ID before other attributes
+                return `<h${level} id="${id}"${attrs}>${content}</h${level}>`;
+            });
+        }
+
+
+        /**
+         * Splits the ID-injected HTML content into chapters (based on <h1>) 
+         * and extracts all subheadings (<h2>, <h3>) for TOC generation.
+         */
+        function splitContentIntoChapters(content) {
+            const chapterChunks = [];
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<body>${content}</body>`, 'text/html');
+            const nodes = Array.from(doc.body.childNodes);
+            
+            let preambleHtml = ''; 
+            let currentTitle = null; 
+            let currentHtml = '';
+            let chapterCounter = 0;
+
+            // Helper to extract subheadings for a given chunk of HTML
+            const extractSubheadings = (html) => {
+                const tempDoc = parser.parseFromString(`<body>${html}</body>`, 'text/html');
+                const subheadings = [];
+                tempDoc.body.querySelectorAll('h2, h3').forEach(el => {
+                    if (el.id) {
+                        subheadings.push({
+                            level: parseInt(el.tagName.substring(1)),
+                            title: el.textContent.trim(),
+                            id: el.id
+                        });
+                    }
+                });
+                return subheadings;
+            };
+
+            // Helper to finalize and push a chapter
+            const finalizeChapter = () => {
+                 // Only finalize if there is actual content and a title
+                if (currentHtml.trim() !== '' && currentTitle !== null) { 
+                    chapterChunks.push({
+                        title: currentTitle,
+                        html: currentHtml.trim(),
+                        subheadings: extractSubheadings(currentHtml.trim())
+                    });
+                }
+                // Reset for next chapter
+                currentTitle = null; 
+                currentHtml = '';
+                chapterCounter++; 
+            };
+
+
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                const isH1 = node.nodeName.toLowerCase() === 'h1';
+
+                // Get outerHTML or wrap text in <p>
+                let nodeHtml = '';
+                if (node.outerHTML) {
+                    nodeHtml = node.outerHTML; // Keep HTML tags
+                } else if (node.textContent.trim()) {
+                    // Wrap lone text nodes in a paragraph tag for valid XHTML
+                    nodeHtml = `<p>${node.textContent.trim()}</p>`;
+                }
+
+                if (!nodeHtml.trim()) continue; // Skip empty nodes
+
+
+                if (isH1) {
+                    // If we hit an H1, finalize the previous chapter (if one exists)
+                    if (currentTitle !== null) { 
+                        finalizeChapter(); 
+                    }
+                    
+                    // Start a new chapter
+                    // The first H1 will capture all content stored in preambleHtml
+                    currentTitle = node.textContent.trim() || `فصل ${chapterCounter + 1}`;
+                    currentHtml = preambleHtml + nodeHtml; 
+                    preambleHtml = ''; // Clear preamble
+                    
+                } else {
+                    // Not an H1
+                    if (currentTitle === null) {
+                        // Content before the first H1
+                        preambleHtml += nodeHtml;
+                    } else {
+                        // Content inside the current chapter
+                        currentHtml += nodeHtml;
+                    }
+                }
+            }
+            
+            // Finalize the last chapter being built
+            if (currentTitle !== null) {
+                finalizeChapter();
+            } 
+            
+            // Handle the edge case: Book with NO H1 tags at all (preambleHtml holds all content)
+            if (chapterChunks.length === 0 && preambleHtml.trim() !== '') {
+                const contentForAll = preambleHtml.trim();
+                
+                // Use the inferred book title as the chapter title
+                const docTitle = document.getElementById('book-title').value.trim();
+                const singleChapterTitle = docTitle || 'متن اصلی'; // Fallback if book title is also empty
+                
+                chapterChunks.push({
+                    title: singleChapterTitle,
+                    html: contentForAll,
+                    subheadings: extractSubheadings(contentForAll)
+                });
+            }
+            
+            // Final re-map to ensure 1-based sequential IDs and filenames
+            return chapterChunks.map((chunk, index) => ({
+                ...chunk,
+                id: `chap_${index + 1}`,
+                filename: `chapter_${index + 1}.xhtml`
+            }));
+        }
+
+
+        /**
+         * Core function to generate the EPUB file.
+         */
+        async function generateEpub() {
+            let title = document.getElementById('book-title').value.trim();
+            const author = document.getElementById('book-author').value.trim() || 'نویسنده ناشناس';
+            const rawContent = document.getElementById('book-content').value.trim();
+            const date = new Date().toISOString().split('T')[0];
+            const uuid = 'urn:uuid:' + crypto.randomUUID();
+            
+            if (!rawContent) {
+                showStatus('لطفاً محتوایی برای کتاب خود اضافه کنید!', true);
+                return;
+            }
+
+            generateButton.disabled = true;
+            generateButton.innerHTML = '<span class="animate-spin inline-block mr-2">🌀</span> در حال ساخت... لطفا صبر کنید.';
+
+            // --- DYNAMIC TITLE GENERATION (Updated Logic) ---
+            if (!title) {
+                let inferredTitle = '';
+                
+                // 1. Try to find the first H1 in the raw Markdown content.
+                const firstH1Match = rawContent.match(/^#\s+(.*?)\s*$/m); 
+
+                if (firstH1Match && firstH1Match[1]) {
+                    inferredTitle = firstH1Match[1].trim();
+                } else {
+                    // 2. No H1 found. Infer from the first few words of plain text.
+                    let cleanText = rawContent.replace(/[\r\n\t]/g, ' ').trim().replace(/#+|##+|###+|----+/g, ''); // Remove all Markdown headings/separators
+                    
+                    // Take the first 8 words to make a descriptive title
+                    const words = cleanText.split(/\s+/).filter(w => w.length > 0);
+                    if (words.length > 0) {
+                        inferredTitle = words.slice(0, Math.min(words.length, 8)).join(' ');
+                        if (words.length > 8) {
+                            inferredTitle += '...';
+                        }
+                    }
+                }
+
+                if (inferredTitle) {
+                    title = inferredTitle;
+                    // IMPORTANT: Save the inferred title back to the input field and local storage.
+                    document.getElementById('book-title').value = title;
+                    saveState(); 
+                } else {
+                    title = 'کتاب با عنوان خودکار';
+                }
+            }
+            // Title is now guaranteed to be set (by user or inferred).
+
+            // 3. Now convert the content to HTML and inject IDs for chapter splitting.
+            let htmlContent = marked.parse(rawContent);
+            htmlContent = injectHeadingIds(htmlContent); 
+            
+            let chapterData;
+            try {
+                // 4. Split content (now HTML) into multiple chapter objects with subheadings data
+                chapterData = splitContentIntoChapters(htmlContent);
+                // Ensure there is at least one chapter, even if content was complex but parsable
+                 if (chapterData.length === 0) {
+                     showStatus('خطا: محتوای کتاب قابل تجزیه به هیچ فصلی نبود. لطفاً مطمئن شوید که محتوا خالی نیست.', true);
+                     throw new Error('No chapters generated.');
+                 }
+
+            } catch (e) {
+                console.error("Splitting Content Error:", e);
+                showStatus(`خطا در تجزیه و تفکیک محتوا: ${e.message}`, true);
+                 generateButton.disabled = false;
+                generateButton.innerHTML = '⬇️ ساخت و دانلود فایل EPUB';
+                return;
+            }
+
+
+            
+            // --- Cover Image/Simple Box Handling ---
+            const coverInput = document.getElementById('cover-image-input');
+            const coverFile = coverInput.files[0];
+            let coverData = null;
+            let coverMimeType = null;
+            let hasImageCover = false;
+            let coverFilename = 'cover_img.jpg'; 
+
+            if (coverFile) {
+                showStatus('در حال خواندن فایل جلد آپلود شده...');
+                hasImageCover = true;
+                coverMimeType = coverFile.type;
+                const extension = coverFile.name.split('.').pop().toLowerCase();
+                coverFilename = extension === 'png' ? 'cover.png' : extension === 'jpg' || extension === 'jpeg' ? 'cover.jpg' : 'cover.img';
+                
+                coverData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]); 
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(coverFile);
+                });
+            }
+
+
+            // --- Filename and Chapter Splitting ---
+            const safeFilename = title.replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '').trim().replace(/\s+/g, '_');
+            const filename = (safeFilename.substring(0, 30) || 'persian_epub') + '.epub';
+
+            try {
+                
+                // -----------------------------------------------------------------
+
+                const zip = new JSZip();
+
+                // ------------------------------------------
+                // 1. Mandatory 'mimetype' file
+                // ------------------------------------------
+                zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+
+                // ------------------------------------------
+                // 2. META-INF folder with container.xml
+                // ------------------------------------------
+                const containerXml = `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`;
+                zip.file('META-INF/container.xml', containerXml);
+
+                // ------------------------------------------
+                // 3. OEBPS Content Folder
+                // ------------------------------------------
+                const OEBPS = zip.folder('OEBPS');
+                
+                OEBPS.folder('fonts');
+                OEBPS.folder('images');
+                
+                // Placeholder font file 
+                OEBPS.file('fonts/BNazanin.ttf', '', { binary: true }); 
+                
+                const coverXhtmlFilename = 'cover.xhtml';
+                let coverImageManifest = '';
+                let coverPageManifest = '';
+                let coverPageSpine = '';
+
+                
+                // 3a. Cover Page (Conditional Content: Image or Simple Box)
+                if (hasImageCover) {
+                    // Case 1: Image was uploaded
+                    OEBPS.file('images/' + coverFilename, coverData, { base64: true });
+                    
+                    coverImageManifest = `<item id="cover-image" href="images/${coverFilename}" media-type="${coverMimeType}" properties="cover-image"/>`;
+                    coverPageManifest = `<item id="cover-page" href="${coverXhtmlFilename}" media-type="application/xhtml+xml"/>`;
+                    coverPageSpine = `<itemref idref="cover-page" linear="no"/>`;
+                    
+                    const imageCoverHtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fa" lang="fa" dir="ltr">
+<head>
+    <title>جلد کتاب</title>
+    <link rel="stylesheet" type="text/css" href="styles.css"/>
+    <style type="text/css">
+        .cover-img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        .cover-page {
+            padding: 0;
+            margin: 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="cover-page">
+    <div epub:type="cover">
+        <img src="images/${coverFilename}" alt="Cover Image" class="cover-img"/>
+    </div>
+</body>
+</html>`;
+                    OEBPS.file(coverXhtmlFilename, imageCoverHtml);
+
+                } else {
+                    // Case 2: No image uploaded -> Enhanced Simple CSS/HTML Cover 
+                    
+                    coverPageManifest = `<item id="cover-page" href="${coverXhtmlFilename}" media-type="application/xhtml+xml"/>`;
+                    coverPageSpine = `<itemref idref="cover-page" linear="no"/>`;
+
+                    const simpleCoverHtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fa" lang="fa" dir="rtl">
+<head>
+    <title>جلد کتاب</title>
+    <link rel="stylesheet" type="text/css" href="styles.css"/>
+    <style type="text/css">
+        /* Import the same font used for the body to keep consistency */
+        @font-face {
+            font-family: 'B Nazanin';
+            src: url('fonts/BNazanin.ttf');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        .cover-page-simple {
+            /* Full viewport height for cover */
+            height: 100%; 
+            width: 100%;
+            /* Gradient Background for a professional look (Darker Slate/Blue) */
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%); 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 5% 8%; 
+            direction: rtl; 
+        }
+        .cover-box {
+            /* A clean box effect */
+            background-color: rgba(255, 255, 255, 0.95); 
+            padding: 3.5em 2.5em; /* Slightly more padding */
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); 
+            border-radius: 20px; /* More rounded */
+            direction: rtl; 
+        }
+        .cover-title-fa {
+            font-family: 'B Nazanin', sans-serif; 
+            font-size: 3em; 
+            font-weight: 900; 
+            color: #1d4ed8; /* Blue-700 */
+            margin: 0 0 0.2em 0;
+            line-height: 1.3;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .cover-subtitle-fa {
+            font-family: 'B Nazanin', sans-serif; 
+            font-size: 1.5em;
+            font-weight: 500;
+            color: #64748b; /* Slate-500 */
+            margin-bottom: 2.5em;
+            border-bottom: 3px solid #e2e8f0;
+            padding-bottom: 1em;
+        }
+        .cover-author-fa {
+            font-family: 'B Nazanin', sans-serif;
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #0f172a; /* Slate-900 */
+            margin-top: 2em;
+        }
+    </style>
+</head>
+<body class="cover-page-simple">
+    <div epub:type="cover" class="cover-box">
+        <p class="cover-title-fa">${title}</p>
+        <p class="cover-subtitle-fa">نسخه کامل با پشتیبانی از زبان فارسی</p>
+        <p class="cover-author-fa">نویسنده: ${author}</p>
+    </div>
+</body>
+</html>`;
+                    OEBPS.file(coverXhtmlFilename, simpleCoverHtml);
+                }
+
+
+                // 3b. Title Page (Always included)
+                const titlePageHtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fa" lang="fa" dir="rtl">
+<head>
+    <title>${title}</title>
+    <link rel="stylesheet" type="text/css" href="styles.css"/>
+    <style type="text/css">
+        .title-page-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 90vh;
+            text-align: center;
+            direction: rtl;
+        }
+        .book-title {
+            font-size: 2.5em;
+            font-weight: 800;
+            margin-bottom: 0.8em;
+            color: #1e40af; /* Blue-800 */
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 0.5em;
+        }
+        .book-author {
+            font-size: 1.6em;
+            color: #374151; /* Gray-700 */
+        }
+        .book-date {
+            margin-top: 60px; 
+            color: #9ca3af; /* Gray-400 */
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body class="title-page">
+    <div class="title-page-content">
+        <h1 class="book-title">${title}</h1>
+        <p class="book-author">نوشته: ${author}</p>
+        <p class="book-date">${date}</p>
+    </div>
+</body>
+</html>`;
+                OEBPS.file('title_page.xhtml', titlePageHtml);
+                
+                
+                // 3c. Create individual chapter HTML files
+                chapterData.forEach(chap => {
+                    // CRITICAL FIX: No extra whitespace/line breaks are added here
+                    const chapterHtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fa" lang="fa" dir="rtl">
+<head>
+    <title>${chap.title}</title>
+    <link rel="stylesheet" type="text/css" href="styles.css"/>
+</head>
+<body>
+    ${chap.html}
+</body>
+</html>`;
+                    OEBPS.file(chap.filename, chapterHtml);
+                });
+
+
+                // 3d. Enhanced Professional CSS (MODIFIED FOR FIRST PARAGRAPH INDENTATION)
+                const stylesCss = `/* Persian EPUB Styles (RTL) - Professional Edition */
+@font-face {
+    font-family: 'B Nazanin';
+    src: url('fonts/BNazanin.ttf');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body { 
+    font-family: 'B Nazanin', Tahoma, Arial, sans-serif;
+    font-size: 1.15em; /* Slightly larger for better readability */
+    line-height: 1.7; /* Optimized line height */
+    margin: 5%; 
+    direction: rtl;
+    text-align: right; 
+    unicode-bidi: embed; 
+    color: #333; /* Darker text for better contrast */
+}
+
+/* Base Paragraph Style */
+p {
+    text-indent: 1.5em; /* Traditional paragraph indent */
+    margin-bottom: 1em;
+    text-align: justify; /* Justify text for a professional look */
+}
+
+/* 📚 CRITICAL TYPOGRAPHY RULE: First paragraph after body/heading should NOT be indented */
+body > p:first-of-type {
+    text-indent: 0; 
+}
+h1 + p, 
+h2 + p, 
+h3 + p {
+    text-indent: 0;
+}
+
+
+h1 { 
+    color: #1f2937; /* Slate-800 */
+    font-size: 2em; 
+    margin-top: 2.5em; 
+    margin-bottom: 1.2em; 
+    text-align: center; 
+    border-bottom: 2px solid #3b82f6; /* Blue accent line */
+    padding-bottom: 0.5em;
+}
+h2 {
+    color: #1e40af; /* Blue-800 */
+    font-size: 1.5em;
+    margin-top: 1.8em;
+    margin-bottom: 0.8em;
+    text-align: right;
+    border-right: 5px solid #3b82f6; /* Stronger accent bar */
+    padding-right: 15px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    background-color: #eff6ff; /* Light blue background */
+}
+h3 {
+    color: #4f46e5; /* Indigo-600 */
+    font-size: 1.3em;
+    margin-top: 1.5em;
+    margin-bottom: 0.6em;
+    text-align: right;
+    font-style: italic;
+    border-right: 2px solid #4f46e5;
+    padding-right: 10px;
+}
+ul, ol {
+    direction: rtl;
+    text-align: right;
+    margin: 1em 5%; 
+    padding: 0;
+}
+li {
+    margin-bottom: 0.6em;
+    list-style-type: disc; /* Use standard disc for ul */
+}
+ol li {
+    list-style-type: decimal; /* Use standard decimal for ol */
+}
+blockquote {
+    direction: rtl;
+    border-right: 6px solid #93c5fd; /* Soft blue for quote */
+    margin: 2.5em 0;
+    padding: 1.5em 2em 1.5em 1em;
+    background-color: #f1f5f9; /* Slate-100 */
+    font-style: italic;
+    color: #475569; /* Slate-700 */
+    text-align: right;
+    border-radius: 5px;
+}
+/* Ensure code blocks are clean and LTR */
+pre {
+    background-color: #1e293b; 
+    color: #f8fafc;
+    padding: 1em;
+    overflow-x: auto;
+    border-radius: 8px;
+    font-family: monospace;
+    direction: ltr; /* Ensure code is LTR */
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+code {
+    background-color: #e2e8f0; 
+    color: #1e293b;
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-family: monospace;
+}`;
+                OEBPS.file('styles.css', stylesCss);
+
+
+                // 3e. Package Document (content.opf) - Dynamic Manifest and Spine 
+                
+                const manifestItems = chapterData.map(chap => 
+                    `<item id="${chap.id}" href="${chap.filename}" media-type="application/xhtml+xml"/>`
+                ).join('\n        ');
+
+                const spineRefs = chapterData.map(chap => 
+                    `<itemref idref="${chap.id}"/>`
+                ).join('\n        ');
+
+
+                const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="3.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <dc:identifier id="BookID">${uuid}</dc:identifier>
+        <dc:title>${title}</dc:title>
+        <dc:creator id="Creator">${author}</dc:creator>
+        <dc:language>fa</dc:language> 
+        <dc:date id="Date">${date}</dc:date>
+        <meta property="dcterms:modified">${new Date().toISOString()}</meta>
+        ${hasImageCover ? `<meta name="cover" content="cover-image"/>` : ''} 
+    </metadata>
+
+    <manifest>
+        ${coverImageManifest}
+        ${coverPageManifest}
+        <item id="title-page" href="title_page.xhtml" media-type="application/xhtml+xml" properties="scripted"/>
+        ${manifestItems}
+        <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+        <item id="nav" href="toc.xhtml" media-type="application/xhtml+xml" properties="nav"/> 
+        <item id="style" href="styles.css" media-type="text/css"/>
+        <item id="font-bn" href="fonts/BNazanin.ttf" media-type="application/font-sfnt"/> 
+    </manifest>
+
+    <spine toc="ncx">
+        ${coverPageSpine} 
+        <itemref idref="title-page" properties="page-spread-left"/> 
+        <itemref idref="nav"/> 
+        ${spineRefs}
+    </spine>
+    
+</package>`;
+                OEBPS.file('content.opf', contentOpf);
+
+                // 3f. NCX Table of Contents (for compatibility) - Nested NavPoints
+                let ncxNavPoints = `
+                    <navPoint id="navpoint-toc" playOrder="1">
+                        <navLabel><text>فهرست مطالب</text></navLabel>
+                        <content src="toc.xhtml"/>
+                    </navPoint>
+                `;
+                let playOrderCounter = 1;
+
+                chapterData.forEach(chap => {
+                    playOrderCounter++;
+                    
+                    // Start H1 NavPoint (Chapter)
+                    let chapterNavPoint = `<navPoint id="navpoint-${chap.id}" playOrder="${playOrderCounter}">
+                            <navLabel><text>${chap.title}</text></navLabel>
+                            <content src="${chap.filename}"/>`;
+                    
+                    if (chap.subheadings.length > 0) {
+                        chapterNavPoint += `  <navMap>\n`; // Start nested navMap for subheadings
+                        
+                        let currentH2NavPoint = null;
+
+                        chap.subheadings.forEach(sub => {
+                            playOrderCounter++;
+                            const subNavPoint = `<navPoint id="navpoint-${sub.id}" playOrder="${playOrderCounter}">
+                                <navLabel><text>${sub.title}</text></navLabel>
+                                <content src="${chap.filename}#${sub.id}"/>
+                            </navPoint>`;
+
+                            if (sub.level === 2) {
+                                // If we hit a new H2, close the previous H2 structure if it was open
+                                if (currentH2NavPoint) {
+                                    chapterNavPoint += currentH2NavPoint + '</navPoint>\n';
+                                }
+                                // Start new H2 structure (must be closed later)
+                                currentH2NavPoint = subNavPoint.replace('</navPoint>', ''); 
+                            } else if (sub.level === 3) {
+                                // H3 must be nested inside the current H2 if available, otherwise it's a direct child of H1 (flat)
+                                if (currentH2NavPoint) {
+                                    // H3 is a child of H2, so it needs a nested navMap
+                                    currentH2NavPoint += `  <navMap>\n`;
+                                    currentH2NavPoint += `    ${subNavPoint}`;
+                                    currentH2NavPoint += `  </navMap>\n`;
+                                } else {
+                                    // If no H2 before, put H3 as direct child of H1
+                                    chapterNavPoint += subNavPoint;
+                                }
+                            }
+                        });
+                        
+                        // Close the last open H2 navPoint
+                        if (currentH2NavPoint) {
+                             chapterNavPoint += currentH2NavPoint + '</navPoint>\n';
+                        }
+                        
+                        chapterNavPoint += `  </navMap>\n`; // End nested navMap
+                    }
+                    
+                    chapterNavPoint += `</navPoint>\n`; // Close H1 NavPoint
+                    ncxNavPoints += chapterNavPoint;
+                });
+
+
+                const tocNcx = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD NCX 2005-1//EN"
+   "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="fa">
+  <head>
+    <meta name="dtb:uid" content="${uuid}"/>
+    <meta name="dtb:depth" content="2"/> 
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle><text>${title}</text></docTitle>
+  <docAuthor><text>${author}</text></docAuthor>
+  <navMap>
+    ${ncxNavPoints}
+  </navMap>
+</ncx>`;
+                OEBPS.file('toc.ncx', tocNcx);
+                
+                // 3g. EPUB 3 Navigation Document (toc.xhtml) - Nested HTML List
+                let xhtmlNavLinks = '';
+                chapterData.forEach(chap => {
+                    xhtmlNavLinks += `<li><a href="${chap.filename}">${chap.title}</a>\n`;
+
+                    if (chap.subheadings.length > 0) {
+                        xhtmlNavLinks += `  <ol>\n`;
+                        
+                        let currentH2List = null; // Stores H2 <li> element while waiting for H3s
+
+                        chap.subheadings.forEach(sub => {
+                            const link = `    <li><a href="${chap.filename}#${sub.id}">${sub.title}</a>`;
+
+                            if (sub.level === 2) {
+                                // Close previous H2 list item if it exists and had H3s
+                                if (currentH2List) {
+                                    if (currentH2List.includes('<ol>')) {
+                                        currentH2List += `\n    </ol>`; // Close H3 list inside H2
+                                    }
+                                    xhtmlNavLinks += currentH2List + '  </li>\n'; // Close H2 list item
+                                }
+                                currentH2List = link; // Start new H2
+                            } else if (sub.level === 3) {
+                                // H3 is nested under the current H2 if available
+                                if (currentH2List) {
+                                    if (!currentH2List.includes('<ol>')) {
+                                        currentH2List += `\n    <ol>`; // Start H3 list
+                                    }
+                                    currentH2List += `\n    ${link}</li>`;
+                                } else {
+                                    // H3 without a preceding H2, nest directly under H1 (in the main <ol>)
+                                    xhtmlNavLinks += `${link}</li>\n`; 
+                                }
+                            }
+                        });
+                        
+                        // Close the last open H2 list item
+                        if (currentH2List) {
+                            if (currentH2List.includes('<ol>')) {
+                                currentH2List += `\n    </ol>`; // Close H3 list
+                            }
+                            xhtmlNavLinks += currentH2List + '</li>\n';
+                        }
+
+                        xhtmlNavLinks += `  </ol>\n`;
+                    }
+                    xhtmlNavLinks += `</li>\n`;
+                });
+
+                const tocXhtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fa" lang="fa" dir="rtl">
+<head>
+    <title>فهرست مطالب</title>
+    <link rel="stylesheet" type="text/css" href="styles.css"/>
+</head>
+<body>
+    <nav epub:type="toc" id="toc">
+        <h1 class="text-center">فهرست مطالب</h1>
+        <ol>
+        ${xhtmlNavLinks}
+        </ol>
+    </nav>
+</body>
+</html>`;
+                OEBPS.file('toc.xhtml', tocXhtml);
+
+
+                // ------------------------------------------
+                // 4. Generate and Download
+                // ------------------------------------------
+
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+                const downloadLink = document.createElement('a');
+                downloadLink.href = URL.createObjectURL(zipBlob);
+                downloadLink.download = filename;
+                
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                showStatus(`موفقیت! فایل ای‌پاب "${filename}" با موفقیت ساخته و دانلود شد.`);
+
+            } catch (error) {
+                console.error("EPUB Generation Error:", error);
+                showStatus(`خطا در تولید ای‌پاب: ${error.message}`, true);
+            } finally {
+                generateButton.disabled = false;
+                generateButton.innerHTML = '⬇️ ساخت و دانلود فایل EPUB';
+            }
+        }
+    </script>
+</body>
+</html>
